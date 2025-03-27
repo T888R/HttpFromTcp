@@ -42,6 +42,11 @@ func RequestFromReader(r io.Reader) (*Request, error) {
 		return nil, errors.New("Http version is not supported")
 	}
 
+	if strings.Contains(reqMethod, "GET") || strings.Contains(reqMethod, "POST") {
+	} else {
+		return nil, errors.New("Was not a get or post request")
+	}
+
 	reqLine := RequestLine{
 		HttpVersion:   httpVersion,
 		RequestTarget: reqTarget,
