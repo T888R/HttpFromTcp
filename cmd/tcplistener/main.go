@@ -68,35 +68,3 @@ func getLinesChannel(f io.ReadCloser) <-chan string {
 	}()
 	return lines
 }
-
-// func getLinesChannel(f io.ReadCloser) <-chan string {
-// 	lines := make(chan string)
-//
-// 	go func() {
-// 		defer f.Close()
-// 		defer close(lines)
-//
-// 		// Use a scanner with a deadline to avoid hanging
-// 		scanner := bufio.NewScanner(f)
-//
-// 		// If f is a net.Conn, set a read deadline
-// 		if conn, ok := f.(net.Conn); ok {
-// 			conn.SetReadDeadline(time.Now().Add(2 * time.Second))
-// 		}
-//
-// 		for scanner.Scan() {
-// 			lines <- scanner.Text()
-// 		}
-//
-// 		// Check if there's any content left in the buffer
-// 		if lineContents := scanner.Text(); lineContents != "" {
-// 			lines <- lineContents
-// 		}
-//
-// 		if err := scanner.Err(); err != nil && err != io.EOF {
-// 			fmt.Printf("error: %s\n", err.Error())
-// 		}
-// 	}()
-//
-// 	return lines
-// }
