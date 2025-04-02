@@ -39,6 +39,13 @@ func main() {
 			fmt.Printf(" - %s: %s\n", k, v)
 		}
 
+		bodyStr := string(req.Body)
+		fmt.Println("Body:")
+		fmt.Println(bodyStr)
+		// for i := 0; i < len(bodyStr); i++ {
+		// 	fmt.Println(bodyStr)
+		// }
+
 		fmt.Println("Connection to ", connection.RemoteAddr(), "closed")
 	}
 }
