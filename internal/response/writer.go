@@ -14,6 +14,9 @@ const (
 	writeStatusBody
 )
 
+const crlf = "\r\n"
+const bufferSize = 8
+
 type Writer struct {
 	writerState writerState
 	writer      io.Writer
@@ -55,4 +58,36 @@ func (w *Writer) WriteBody(p []byte) (int, error) {
 		return 0, fmt.Errorf("Can't write body %d", w.writerState)
 	}
 	return w.writer.Write(p)
+}
+
+func (w *Writer) WriteChunkedBody(p []byte) (int, error) {
+	if w.writerState != writeStatusBody {
+		return 0, fmt.Errorf("Can't write chunked body %d", w.writerState)
+	}
+	chunkSize := len(p)
+	nTotal := 0
+	n, err := fmt.Fprintf(w.writer, "%x\r\n", chunkSize)
+	if err != nil {
+		return nTotal, err
+	}
+	nTotal += n
+
+	n, err = w.writer.Write(p)
+	if err != nil {
+		return nTotal, err
+	}
+	nTotal += n
+
+	n, err = w.writer.Write([]byte("\r\n"))
+	if err != nil {
+		return nTotal, err
+	}
+	nTotal += n
+	return nTotal, nil
+}
+
+func (w *Writer) WriteChunkedBodyDone() (int, error) {
+	w.writer.Write(fmt.Append([]byte("0\r\n")))
+	w.writer.Write(fmt.Append([]byte("\r\n")))
+	return 0, nil
 }
