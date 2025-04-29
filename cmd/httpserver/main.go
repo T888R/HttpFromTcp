@@ -1,7 +1,9 @@
 package main
 
 import (
+	"crypto/sha256"
 	"fmt"
+	"httpfromtcp/internal/headers"
 	"httpfromtcp/internal/request"
 	"httpfromtcp/internal/response"
 	"httpfromtcp/internal/server"
@@ -35,6 +37,10 @@ func handler(w *response.Writer, req *request.Request) {
 		handlerChunks(w, req)
 		return
 	}
+	if req.RequestLine.RequestTarget == "/video" {
+		handlerVideo(w, req)
+		return
+	}
 	if req.RequestLine.RequestTarget == "/yourproblem" {
 		handler400(w, req)
 		return
@@ -60,8 +66,11 @@ func handlerChunks(w *response.Writer, req *request.Request) {
 	w.WriteStatusLine(response.StatusOK)
 	h := response.GetDefaultHeaders(0)
 	h.Override("Transfer-Encoding", "chunked")
-	delete(h, "Content-Length")
+	h.Override("Trailer", "X-Content-SHA256, X-Content-Length")
+	h.Remove("Content-Length")
 	w.WriteHeaders(h)
+
+	fullBody := make([]byte, 0)
 
 	const maxChunkSize = 1024
 	buffer := make([]byte, maxChunkSize)
@@ -74,6 +83,7 @@ func handlerChunks(w *response.Writer, req *request.Request) {
 				fmt.Println("Error writing chunked body:", err)
 				break
 			}
+			fullBody = append(fullBody, buffer[:n]...)
 		}
 		if err == io.EOF {
 			break
@@ -87,6 +97,31 @@ func handlerChunks(w *response.Writer, req *request.Request) {
 	if err != nil {
 		fmt.Println("Error writing chunked body done:", err)
 	}
+
+	trailers := headers.NewHeaders()
+	sha256 := fmt.Sprintf("%x", sha256.Sum256(fullBody))
+	trailers.Override("X-Content-SHA256", sha256)
+	trailers.Override("X-Content-Length", fmt.Sprintf("%d", len(fullBody)))
+	err = w.WriteTrailers(trailers)
+	if err != nil {
+		fmt.Println("Error writing trailers:", err)
+	}
+	return
+}
+
+func handlerVideo(w *response.Writer, _ *request.Request) {
+	w.WriteStatusLine(response.StatusOK)
+
+	h := response.GetDefaultHeaders(0)
+	body, err := os.ReadFile("/home/t8/code/bootdev/httpfromtcp/assets/vim.mp4")
+	if err != nil {
+		fmt.Println("Error loading file", err)
+	}
+	h.Override("Content-Type", "video/mp4")
+	h.Override("Content-Length", fmt.Sprintf("%d", len(body)))
+	w.WriteHeaders(h)
+	w.WriteBody(body)
+	return
 }
 
 func handler400(w *response.Writer, _ *request.Request) {
